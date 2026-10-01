@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="380" viewBox="0 0 1100 380" role="img" aria-labelledby="title description">
+  <title id="title">Download from the Files tree or document preview</title>
+  <desc id="description">A schematic showing a download icon beside report.docx, sheet.xlsx, and report.pdf, and a labeled Download button in the original document preview toolbar.</desc>
+  <defs>
+    <linearGradient id="background" x2="1" y2="1">
+      <stop stop-color="#f0f5ff"/>
+      <stop offset="1" stop-color="#f8fafc"/>
+    </linearGradient>
+    <symbol id="download" viewBox="0 0 24 24">
+      <path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+  <rect width="1100" height="380" rx="18" fill="url(#background)"/>
+  <g font-family="system-ui, -apple-system, sans-serif">
+    <text x="36" y="44" fill="#13243d" font-size="22" font-weight="650">Your files. One click away.</text>
+    <text x="36" y="71" fill="#53647a" font-size="14">Original bytes · Original filenames · Files and preview</text>
+    <text x="1064" y="44" text-anchor="end" fill="#64748b" font-size="11" letter-spacing="1">UI ILLUSTRATION</text>
+    <rect x="36" y="96" width="340" height="248" rx="12" fill="#fff" stroke="#dbe3ee"/>
+    <text x="58" y="129" font-size="15" font-weight="600" fill="#334155">Files</text>
+    <path d="M36 146h340" stroke="#e7edf4"/>
+    <rect x="48" y="157" width="316" height="48" rx="7" fill="#eef4ff"/>
+    <rect x="60" y="170" width="22" height="24" rx="4" fill="#4267c8"/>
+    <text x="71" y="187" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">W</text>
+    <text x="96" y="187" font-size="14" fill="#24354c">report.docx</text>
+    <use href="#download" x="327" y="169" width="24" height="24" color="#315fc2"/>
+    <rect x="60" y="225" width="22" height="24" rx="4" fill="#26885a"/>
+    <text x="71" y="242" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">X</text>
+    <text x="96" y="242" font-size="14" fill="#24354c">sheet.xlsx</text>
+    <use href="#download" x="327" y="224" width="24" height="24" color="#64748b"/>
+    <rect x="60" y="280" width="22" height="24" rx="4" fill="#c95353"/>
+    <text x="71" y="297" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">P</text>
+    <text x="96" y="297" font-size="14" fill="#24354c">report.pdf</text>
+    <use href="#download" x="327" y="279" width="24" height="24" color="#64748b"/>
+    <rect x="396" y="96" width="668" height="248" rx="12" fill="#fff" stroke="#dbe3ee"/>
+    <text x="419" y="129" font-size="14" font-weight="600" fill="#334155">report.docx</text>
+    <rect x="926" y="108" width="116" height="30" rx="6" fill="#eef4ff"/>
+    <use href="#download" x="936" y="113" width="20" height="20" color="#315fc2"/>
+    <text x="963" y="129" font-size="13" font-weight="550" fill="#315fc2">Download</text>
+    <path d="M396 146h668" stroke="#e7edf4"/>
+    <rect x="446" y="165" width="568" height="157" rx="3" fill="#fff" stroke="#e2e8f0"/>
+    <text x="470" y="204" font-size="22" font-weight="600" fill="#26456d">Project report</text>
+    <path d="M470 217h300" stroke="#6383b3"/>
+    <text x="470" y="247" font-size="13" fill="#53647a">Preview the document. Save the original .docx.</text>
+    <path d="M470 268h450m-450 15h400m-400 15h425" stroke="#e2e8f0" stroke-width="5" stroke-linecap="round"/>
+  </g>
+</svg>

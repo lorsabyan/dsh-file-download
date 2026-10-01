@@ -1,0 +1,16 @@
+name: Feature request
+description: Propose a focused improvement to file downloads.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem should this solve?
+      description: Describe the workflow and the user-visible outcome.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Suggested behavior
+      description: Include browser or Harness compatibility requirements if known.

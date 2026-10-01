@@ -1,0 +1,71 @@
+{
+  "name": "dsh-file-download",
+  "version": "0.1.0",
+  "description": "Download original files from DeepSeek Harness's Files tree and document previews.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=22.22.2"
+  },
+  "license": "MIT",
+  "author": "Aghasi Lorsabyan",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lorsabyan/dsh-file-download.git"
+  },
+  "homepage": "https://github.com/lorsabyan/dsh-file-download#readme",
+  "bugs": {
+    "url": "https://github.com/lorsabyan/dsh-file-download/issues"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "download",
+    "docx",
+    "xlsx",
+    "pdf"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-api-remotes",
+        "@deepseek-ai/dsh-api-workspace-files",
+        "@deepseek-ai/dsh-client-ui-sidebar-files",
+        "@deepseek-ai/dsh-client-ui-sidebar-documentpreview",
+        "@deepseek-ai/dsh-client-ui-renderer"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node --test test/*.test.mjs",
+    "test:harness": "node scripts/smoke-harness.mjs",
+    "check": "npm run format:check && node scripts/build.mjs --check && npm test",
+    "prepack": "npm run check",
+    "release:pack": "node scripts/pack.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "jsdom": "30.1.1",
+    "prettier": "3.9.9",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  }
+}

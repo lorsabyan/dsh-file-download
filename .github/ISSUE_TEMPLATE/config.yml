@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Sensitive security report
+    url: https://github.com/lorsabyan/dsh-file-download/security/advisories/new
+    about: Use private reporting for vulnerabilities; see SECURITY.md.
+  - name: Harness support and upstream discussion
+    url: https://github.com/deepseek-ai/deepseek-harness/discussions
+    about: General Harness setup, document converters, and host API questions.

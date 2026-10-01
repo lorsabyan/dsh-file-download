@@ -1,0 +1,38 @@
+name: Bug report
+description: Report a reproducible download or installation problem.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Use a harmless fixture. Remove credentials, private document content, hostnames, and private paths from screenshots and logs. For sensitive issues, follow SECURITY.md.
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Plugin version, Harness version, and browser/version.
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where does the problem occur?
+      options: [Files tree, Preview toolbar, Installation, Other]
+    validations:
+      required: true
+  - type: input
+    id: file
+    attributes:
+      label: File type and approximate size
+      placeholder: DOCX, 200 KiB
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include expected and actual behavior, using a harmless file.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized error message or log
+      render: text
