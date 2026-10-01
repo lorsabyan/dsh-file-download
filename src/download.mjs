@@ -10,7 +10,7 @@ export function filenameOf(path) {
   );
 }
 
-function checkIdentity(info, expected) {
+export function checkIdentity(info, expected) {
   if (
     info.version !== expected.version ||
     info.absolutePath !== expected.absolutePath ||
@@ -20,7 +20,7 @@ function checkIdentity(info, expected) {
   }
 }
 
-function valueOf(result) {
+export function valueOf(result) {
   if (result?.ok === true) return result.value;
   if (result?.ok === false) {
     throw result.error instanceof Error

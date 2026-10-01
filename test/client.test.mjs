@@ -5,8 +5,11 @@ import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { install, apply } from "../src/client.mjs";
 import { BUFFER_LIMIT } from "../src/download.mjs";
+import { unzipSync } from "fflate";
+import { directorySource } from "./fixtures/archive.mjs";
 
 const BUTTON = "button[data-dsh-file-download]";
+const FILE_BUTTON = 'button[data-dsh-download-kind="file"]';
 let dom, ui, root, downloads, blobs, revoked;
 const originalCreateURL = URL.createObjectURL;
 const originalRevokeURL = URL.revokeObjectURL;
@@ -110,7 +113,7 @@ test("concurrency is capped at two transfers and cancellation frees a slot", asy
       );
     },
   });
-  const buttons = [...document.querySelectorAll(BUTTON)];
+  const buttons = [...document.querySelectorAll(FILE_BUTTON)];
   buttons.forEach((button) => button.click());
   assert.equal(signals.length, 2);
   assert.match(status(), /Two downloads/);
@@ -123,7 +126,7 @@ test("concurrency is capped at two transfers and cancellation frees a slot", asy
   ui = undefined;
 });
 
-test("file actions preserve native open handlers and exclude folders and other entries", async () => {
+test("file and folder actions preserve native handlers and exclude special entries", async () => {
   const row = fileTree();
   let opened = 0,
     bubbled = 0;
@@ -131,7 +134,17 @@ test("file actions preserve native open handlers and exclude folders and other e
   row.addEventListener("click", () => bubbled++);
   const remote = remoteFile();
   ui = install(remote);
-  assert.equal(document.querySelectorAll(BUTTON).length, 1);
+  assert.equal(document.querySelectorAll(BUTTON).length, 2);
+  assert.equal(
+    document
+      .querySelector('[data-files-entry="directory"] button[data-dsh-file-download]')
+      .getAttribute("aria-label"),
+    "Download folder as ZIP",
+  );
+  assert.equal(
+    document.querySelector('[data-files-entry="other"] button[data-dsh-file-download]'),
+    null,
+  );
   row.firstElementChild.click();
   assert.equal(opened, 1);
   assert.equal(bubbled, 1);
@@ -151,13 +164,13 @@ test("new rows and path/session refreshes receive one correctly labeled action",
   const clone = row.cloneNode(true);
   clone.querySelector(BUTTON).remove();
   row.parentElement.append(clone);
-  await until(() => document.querySelectorAll(BUTTON).length === 2);
+  await until(() => document.querySelectorAll(FILE_BUTTON).length === 2);
   assert.equal(row.querySelector(BUTTON).getAttribute("aria-label"), "Download renamed.pdf");
   row.closest("section").removeAttribute("data-sidebar-right-session");
   await until(() => row.querySelector(BUTTON).disabled);
   row.closest("section").setAttribute("data-sidebar-right-session", "new-session");
   await until(() => !row.querySelector(BUTTON).disabled);
-  assert.equal(document.querySelectorAll(BUTTON).length, 2);
+  assert.equal(document.querySelectorAll(FILE_BUTTON).length, 2);
 });
 
 test("preview downloads the original path using the resource owner's session", async () => {
@@ -293,11 +306,11 @@ test("unloading removes controls and styles, revokes blobs, and disconnects obse
   assert.equal(document.querySelectorAll(BUTTON).length, 0);
 });
 
-test("activation registers the official preview action slot and unloads it", () => {
+test("activation registers the preview and folder toolbar slots and unloads them", () => {
   fileTree();
   let cleanup,
-    unregistered = false,
-    registered;
+    unregistered = [],
+    registered = [];
   const ctx = {
     remote: { workspaceFiles: remoteFile() },
     effect(callback) {
@@ -305,21 +318,147 @@ test("activation registers the official preview action slot and unloads it", () 
     },
     slots: {
       inject(name, callback) {
-        assert.equal(name, "sidebar.right.tab.document.actions");
         callback();
         return () => {
-          unregistered = true;
+          unregistered.push(name);
         };
       },
       register(meta, component) {
-        registered = { meta, component };
+        registered.push({ meta, component });
       },
     },
   };
   apply(ctx);
-  assert.equal(registered.meta.id, "dsh-file-download");
-  assert.equal(typeof registered.component, "function");
+  assert.deepEqual(
+    registered.map((item) => item.meta.id),
+    ["dsh-file-download", "dsh-folder-download"],
+  );
+  assert.ok(registered.every((item) => typeof item.component === "function"));
   cleanup();
-  assert.equal(unregistered, true);
+  assert.deepEqual(unregistered, [
+    "sidebar.right.tab.document.actions",
+    "sidebar.right.tab.files.actions",
+  ]);
   assert.equal(document.querySelectorAll(BUTTON).length, 0);
+});
+
+test("folder action saves a recursive ZIP without triggering native expand", async () => {
+  fileTree();
+  const folder = document.querySelector('[data-files-entry="directory"]');
+  let expanded = 0,
+    bubbled = 0;
+  folder.firstElementChild.addEventListener("click", () => expanded++);
+  folder.addEventListener("click", () => bubbled++);
+  const source = directorySource(
+    { "folder/nested/file.txt": "content" },
+    ["folder/empty"],
+    "folder",
+  );
+  ui = install(source.remote);
+  folder.firstElementChild.click();
+  assert.equal(expanded, 1);
+  assert.equal(bubbled, 1);
+  folder.querySelector(BUTTON).click();
+  await until(() => downloads.length === 1);
+  assert.equal(expanded, 1);
+  assert.equal(bubbled, 1);
+  assert.equal(downloads[0].name, "folder.zip");
+  const files = unzipSync(new Uint8Array(await blobs[0].arrayBuffer()));
+  assert.equal(new TextDecoder().decode(files["folder/nested/file.txt"]), "content");
+  assert.ok(Object.hasOwn(files, "folder/empty/"));
+});
+
+test("folder save picker opens on the original click and streams directly to its writer", async () => {
+  fileTree();
+  const source = directorySource(
+    { "folder/large.bin": new Uint8Array(40 * 1024 * 1024).fill(179) },
+    [],
+    "folder",
+  );
+  let chosen = false,
+    closed = false,
+    bytes = 0;
+  const list = source.remote.list;
+  source.remote.list = async (...args) => {
+    assert.equal(chosen, true);
+    return list(...args);
+  };
+  window.showSaveFilePicker = async ({ suggestedName }) => {
+    assert.equal(suggestedName, "folder.zip");
+    chosen = true;
+    return {
+      async createWritable() {
+        return {
+          async write(data) {
+            bytes += data.length;
+          },
+          async close() {
+            closed = true;
+          },
+          async abort() {
+            assert.fail("Successful streaming must not abort");
+          },
+        };
+      },
+    };
+  };
+  ui = install(source.remote);
+  document.querySelector('[data-files-entry="directory"]').querySelector(BUTTON).click();
+  assert.equal(chosen, true, "Save picker must be opened before awaiting enumeration");
+  await until(() => closed);
+  assert.ok(bytes > 40 * 1024 * 1024);
+  assert.equal(blobs.length, 0);
+  assert.equal(downloads.length, 0);
+  assert.match(status(), /Saved folder.zip/);
+});
+
+test("canceling a folder picker performs no enumeration or file reads", async () => {
+  fileTree();
+  const source = directorySource({}, [], "folder");
+  window.showSaveFilePicker = async () => {
+    throw new dom.window.DOMException("Cancelled", "AbortError");
+  };
+  ui = install(source.remote);
+  document.querySelector('[data-files-entry="directory"]').querySelector(BUTTON).click();
+  await until(() => status().includes("cancelled"));
+  assert.equal(source.calls.length, 0);
+  assert.equal(downloads.length, 0);
+});
+
+test("Files toolbar saves the workspace root with the sidebar's owning session", async () => {
+  const host = document.createElement("section");
+  host.dataset.sidebarRightSession = "root-owner";
+  document.body.append(host);
+  const source = directorySource({ "a.txt": "root content" }, [], "");
+  ui = install(source.remote);
+  root = createRoot(host);
+  await act(() => root.render(React.createElement(ui.FolderDownload, { absolutePath: "" })));
+  const button = host.querySelector(BUTTON);
+  assert.equal(button.textContent, "Download ZIP");
+  assert.equal(button.disabled, false);
+  button.click();
+  await until(() => downloads.length === 1);
+  assert.equal(downloads[0].name, "workspace.zip");
+  assert.ok(source.calls.every((call) => call.sessionId === "root-owner"));
+});
+
+test("an incomplete folder listing reports an error without starting a download", async () => {
+  fileTree();
+  ui = install({
+    async list() {
+      return { ok: true, value: { path: "folder", entries: [], truncated: true } };
+    },
+  });
+  document.querySelector('[data-files-entry="directory"]').querySelector(BUTTON).click();
+  await until(() => status().includes("truncated"));
+  assert.equal(downloads.length, 0);
+  assert.equal(blobs.length, 0);
+});
+
+test("a row changing to an unsupported entry loses its action", async () => {
+  const row = fileTree();
+  ui = install(remoteFile());
+  row.setAttribute("data-files-entry", "other");
+  await until(() => !row.querySelector(BUTTON));
+  assert.equal(row.classList.contains("dsh-file-download-row"), false);
 });

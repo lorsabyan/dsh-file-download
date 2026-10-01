@@ -1,6 +1,6 @@
 {
   "name": "dsh-file-download",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Download original files from DeepSeek Harness's Files tree and document previews.",
   "type": "module",
   "main": "lib/index.js",
@@ -56,13 +56,14 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "node --test test/*.test.mjs",
-    "test:harness": "node scripts/smoke-harness.mjs",
+    "test:harness": "node scripts/smoke-harness.mjs && node scripts/smoke-archive.mjs",
     "check": "npm run format:check && node scripts/build.mjs --check && npm test",
     "prepack": "npm run check",
     "release:pack": "node scripts/pack.mjs"
   },
   "devDependencies": {
     "esbuild": "0.28.2",
+    "fflate": "0.8.3",
     "jsdom": "30.1.1",
     "prettier": "3.9.9",
     "react": "19.3.0",
