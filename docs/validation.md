@@ -7,13 +7,15 @@
 Tests cover:
 
 - Binary and Unicode content, empty files, chunk boundaries, and a 40 MiB streamed transfer.
+- Independently decoded recursive ZIPs, hidden files, empty directories, CRC-32, archive limits, unsafe names, truncated listings, and observed folder changes.
 - Changed source versions, malformed metadata, invalid offsets, truncation, disconnects, and cancellation.
 - Bounded buffer behavior and writer lifecycle.
 - Native open handlers, regular-file filtering, refreshed rows, accessible labels, and owning sessions.
 - Preview mounting/unmounting, save-picker gesture retry, unsupported large-file behavior, and plugin unload.
+- Folder controls, root toolbar ownership, original-click save pickers, streaming ZIPs, and canceled folder dialogs.
 - Browser ModuleLoader registration, portable activation metadata, no-op server activation, and the archive file allowlist.
 
-The DOM tests use jsdom and Harness-shaped service mocks. They cannot prove native Save dialog behavior or compatibility with a future Harness release.
+The DOM tests use jsdom and Harness-shaped service mocks. They cannot prove native Save dialog behavior or compatibility with a future Harness release. The archive integration check separately exercises Harness's real `WorkspaceFiles` service and local filesystem: Unicode/hidden/empty entries, a 40 MiB streamed ZIP, independent decoding, and symlink refusal.
 
 The public `0.1.0` archive also passed the isolated installer/authentication/browser-registration/removal smoke check on Linux ARM64 with Harness `0.2.0-rc.2` and pnpm `10.34.6`. GitHub CI covers Linux x64. Native browser Save behavior remains a manual check.
 
@@ -25,7 +27,7 @@ Native PDF, DOCX, XLSX, and text previews remained usable with the preview Downl
 
 ## Release checklist
 
-With Harness and pnpm available on `PATH`, run `npm run test:harness` after packaging. It installs the exact archive into a temporary home, checks native authentication and the browser boot manifest, then removes the plugin. It never uses your existing Harness home. Set `DSH_BIN` if the CLI needs an explicit path.
+With Harness and pnpm available on `PATH`, run `npm run test:harness` after packaging. It installs the exact archive into a temporary home, checks native authentication and the browser boot manifest, removes the plugin, and runs the real filesystem archive check. It never uses your existing Harness home. Set `DSH_BIN` if the CLI needs an explicit path.
 
 1. Use a clean checkout, run `npm ci`, rebuild, and run `npm run check`.
 2. Run `npm run release:pack`; inspect the archive and verify `SHA256SUMS`.

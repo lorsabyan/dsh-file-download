@@ -16,6 +16,8 @@ test("prebuilt browser module registers the package ID and uses Harness's React"
   let loaded;
   const source = await readFile(new URL("../lib/client.js", import.meta.url), "utf8");
   vm.runInNewContext(source, {
+    TextEncoder,
+    TextDecoder,
     window: {
       __ModuleLoader__: {
         load(record) {

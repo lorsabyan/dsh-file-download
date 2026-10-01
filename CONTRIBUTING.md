@@ -18,9 +18,9 @@ Add a behavioral test when changing transfer safety, UI lifecycle, or packaging.
 
 ## Scope
 
-The plugin saves original regular files through Harness's existing authenticated file service. Keep the shared React external, the server entry minimal, and memory use bounded. A host-provided per-file action slot is preferred over expanding the Files DOM adapter.
+The plugin saves original regular files and creates folder ZIPs through Harness's existing authenticated file service. Keep the shared React external, the server entry minimal, and memory use bounded. A host-provided entry action slot is preferred over expanding the Files DOM adapter.
 
-File conversion, folder archives, and new server file routes require a separate design discussion. Changes that broaden file access, introduce telemetry, or upload file content need an explicit security review.
+File conversion, new archive formats, and new server file routes require a separate design discussion. Changes that broaden file access, introduce telemetry, or upload file content need an explicit security review.
 
 ## Reporting issues
 

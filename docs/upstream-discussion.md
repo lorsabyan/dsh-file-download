@@ -4,7 +4,7 @@ This is a prepared announcement for Harness Discussions. It has not been posted 
 
 **Suggested title:** Community plugin: Download from Files and document previews
 
-I built [dsh-file-download](https://github.com/lorsabyan/dsh-file-download), an independent community plugin that adds a Download action to regular files in the Files tree and the native document preview toolbar.
+I built [dsh-file-download](https://github.com/lorsabyan/dsh-file-download), an independent community plugin that adds Download actions to files and folders in the Files tree and to the native document preview toolbar. Folders download as recursive ZIP archives; the Files toolbar can archive the current root.
 
 It preserves original bytes and filenames, including the original DOCX/XLSX behind a rendered preview. Transfers use the existing authenticated workspaceFiles Remote, sequential 1 MiB reads, cancellation, and file identity checks. Small files use browser downloads; larger files use a supported browser save picker. The prebuilt release installs as a normal Harness bundle.
 

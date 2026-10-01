@@ -1,7 +1,8 @@
 import { BUFFER_LIMIT, filenameOf, fileInfo, copyFile, bufferedWriter } from "./download.mjs";
+import { archiveName, planArchive, copyArchive } from "./archive.mjs";
 import React from "react";
 
-const ROW = '[data-files-entry="file"][data-files-path]';
+const ROW = ':is([data-files-entry="file"],[data-files-entry="directory"])[data-files-path]';
 const BUTTON = "button[data-dsh-file-download]";
 const CSS = `
 .dsh-file-download-row{position:relative}
@@ -29,7 +30,15 @@ function icon(button, busy = false) {
   svg.append(path);
   button.replaceChildren(svg);
   if (button.dataset.dshFileDownload === "preview") {
-    button.append(document.createTextNode(busy ? "Cancel" : "Download"));
+    button.append(
+      document.createTextNode(
+        busy
+          ? "Cancel"
+          : button.dataset.dshDownloadKind === "directory"
+            ? "Download ZIP"
+            : "Download",
+      ),
+    );
   }
 }
 
@@ -65,6 +74,7 @@ export function install(remote) {
 
   const contextOf = (row) => ({
     path: row.getAttribute("data-files-path"),
+    directory: row.getAttribute("data-files-entry") === "directory",
     sessionId: row
       .closest("[data-sidebar-right-session]")
       ?.getAttribute("data-sidebar-right-session"),
@@ -75,15 +85,15 @@ export function install(remote) {
       active.get(button).abort();
       return;
     }
-    const { path, sessionId } = getContext();
-    if (!path || !sessionId) return;
+    const { path, sessionId, directory = false } = getContext();
+    if (typeof path !== "string" || (!path && !directory) || !sessionId) return;
     if (active.size >= 2) {
       notify("Two downloads are running. Wait for one to finish.");
       return;
     }
     const controller = new AbortController();
     const { signal } = controller;
-    const name = filenameOf(path);
+    const name = directory ? archiveName(path) : filenameOf(path);
     active.set(button, controller);
     button.setAttribute("aria-label", `Cancel download of ${name}`);
     button.title = `Cancel download of ${name}`;
@@ -91,21 +101,36 @@ export function install(remote) {
     let writer;
     let buffered;
     try {
+      if (directory) notify(`Preparing ${name}…`);
       const cached = prepared.get(button);
       prepared.delete(button);
       let info;
       // A second click after an expired user gesture opens the picker immediately.
-      if (cached?.path === path && cached.sessionId === sessionId) {
+      const prepare = () =>
+        directory
+          ? planArchive(remote, sessionId, path, signal)
+          : fileInfo(remote, sessionId, path, signal);
+      if (directory && typeof window.showSaveFilePicker === "function") {
+        // Folders may take longer than a user gesture to enumerate. Open their
+        // picker on the original click; create no writer until planning succeeds.
         const handle = await window.showSaveFilePicker({ suggestedName: name });
-        info = await fileInfo(remote, sessionId, path, signal);
+        info = await prepare();
+        writer = await handle.createWritable();
+      } else if (
+        cached?.path === path &&
+        cached.sessionId === sessionId &&
+        cached.directory === directory
+      ) {
+        const handle = await window.showSaveFilePicker({ suggestedName: name });
+        info = await prepare();
         writer = await handle.createWritable();
       } else {
-        info = await fileInfo(remote, sessionId, path, signal);
+        info = await prepare();
         if (info.bytes > BUFFER_LIMIT) {
           if (typeof window.showSaveFilePicker !== "function") {
-            throw new Error("Files larger than 32 MiB need Chrome or Edge's save dialog.");
+            throw new Error("Downloads larger than 32 MiB need Chrome or Edge's save dialog.");
           }
-          prepared.set(button, { path, sessionId });
+          prepared.set(button, { path, sessionId, directory });
           const handle = await window.showSaveFilePicker({ suggestedName: name });
           prepared.delete(button);
           writer = await handle.createWritable();
@@ -115,9 +140,11 @@ export function install(remote) {
         }
       }
       notify(`Downloading ${name}…`);
-      await copyFile(remote, sessionId, path, info, writer, signal, (done, total) => {
+      const progress = (done, total) => {
         button.title = `Cancel download of ${name} (${Math.floor((done / total) * 100)}%)`;
-      });
+      };
+      if (directory) await copyArchive(remote, sessionId, info, writer, signal, progress);
+      else await copyFile(remote, sessionId, path, info, writer, signal, progress);
       if (buffered) {
         const url = URL.createObjectURL(buffered.blob());
         const anchor = document.createElement("a");
@@ -154,7 +181,9 @@ export function install(remote) {
       active.delete(button);
       if (!disposed && button.isConnected) {
         const current = getContext();
-        const label = `Download ${filenameOf(current.path || path)}`;
+        const label = current.directory
+          ? `Download ${archiveName(current.path || path).slice(0, -4)} as ZIP`
+          : `Download ${filenameOf(current.path || path)}`;
         button.setAttribute("aria-label", label);
         button.title = label;
         button.disabled = !current.sessionId;
@@ -164,7 +193,7 @@ export function install(remote) {
   }
 
   function attach(row) {
-    const { path, sessionId } = contextOf(row);
+    const { path, sessionId, directory } = contextOf(row);
     let button = [...row.children].find((child) => child.matches(BUTTON));
     if (!button) {
       button = document.createElement("button");
@@ -180,7 +209,10 @@ export function install(remote) {
       icon(button);
     }
     if (!active.has(button)) {
-      const label = `Download ${filenameOf(path)}`;
+      button.dataset.dshDownloadKind = directory ? "directory" : "file";
+      const label = directory
+        ? `Download ${archiveName(path).slice(0, -4)} as ZIP`
+        : `Download ${filenameOf(path)}`;
       button.setAttribute("aria-label", label);
       button.title = label;
       button.disabled = !sessionId;
@@ -196,8 +228,15 @@ export function install(remote) {
   // Add sibling controls, never replace React-owned file rows or their handlers.
   const observer = new MutationObserver((records) => {
     for (const record of records) {
-      if (record.type === "attributes") scan(record.target);
-      else for (const node of record.addedNodes) scan(node);
+      if (record.type === "attributes") {
+        if (record.attributeName === "data-files-entry" && !record.target.matches(ROW)) {
+          const button = [...record.target.children].find((child) => child.matches(BUTTON));
+          active.get(button)?.abort();
+          button?.remove();
+          record.target.classList.remove("dsh-file-download-row");
+        }
+        scan(record.target);
+      } else for (const node of record.addedNodes) scan(node);
     }
   });
   scan(document.body);
@@ -205,35 +244,45 @@ export function install(remote) {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ["data-files-path", "data-sidebar-right-session"],
+    attributeFilter: ["data-files-path", "data-files-entry", "data-sidebar-right-session"],
   });
 
-  function PreviewDownload({ absolutePath, sessionId }) {
+  function ToolbarDownload({ absolutePath, sessionId, directory = false }) {
     const host = React.useRef(null);
     React.useEffect(() => {
       const button = document.createElement("button");
       button.type = "button";
       button.dataset.dshFileDownload = "preview";
+      button.dataset.dshDownloadKind = directory ? "directory" : "file";
       const getContext = () => {
         // A preview can reference a file owned by a different session.
         const address = host.current
           ?.closest("[data-textpreview-url]")
           ?.getAttribute("data-textpreview-url");
         const prefix = "dsh-resource://file/session/";
-        let ownerSession = sessionId;
-        if (address?.startsWith(prefix)) {
+        let ownerSession =
+          sessionId ||
+          host.current
+            ?.closest("[data-sidebar-right-session]")
+            ?.getAttribute("data-sidebar-right-session");
+        if (!directory && address?.startsWith(prefix)) {
           try {
             ownerSession = decodeURIComponent(address.slice(prefix.length).split("/")[0]);
           } catch {
             return {};
           }
         }
-        return { path: absolutePath, sessionId: ownerSession };
+        return { path: absolutePath, sessionId: ownerSession, directory };
       };
-      const label = `Download ${filenameOf(absolutePath)}`;
+      const label = directory
+        ? `Download ${archiveName(absolutePath || "").slice(0, -4)} as ZIP`
+        : `Download ${filenameOf(absolutePath || "")}`;
       button.setAttribute("aria-label", label);
       button.title = label;
-      button.disabled = !absolutePath || !getContext().sessionId;
+      button.disabled =
+        typeof absolutePath !== "string" ||
+        (!absolutePath && !directory) ||
+        !getContext().sessionId;
       icon(button);
       button.addEventListener("click", (event) => {
         event.preventDefault();
@@ -246,9 +295,13 @@ export function install(remote) {
         prepared.delete(button);
         button.remove();
       };
-    }, [absolutePath, sessionId]);
+    }, [absolutePath, sessionId, directory]);
     return React.createElement("span", { ref: host, "data-dsh-preview-download": "" });
   }
+
+  const PreviewDownload = (props) => React.createElement(ToolbarDownload, props);
+  const FolderDownload = (props) =>
+    React.createElement(ToolbarDownload, { ...props, directory: true });
 
   const dispose = () => {
     disposed = true;
@@ -266,7 +319,7 @@ export function install(remote) {
     style.remove();
     status.remove();
   };
-  return { PreviewDownload, dispose };
+  return { PreviewDownload, FolderDownload, dispose };
 }
 
 export const inject = ["remote", "remote.workspaceFiles", "slots"];
@@ -283,8 +336,19 @@ export function apply(ctx) {
         ui.PreviewDownload,
       ),
     );
+    const unregisterFolders = ctx.slots.inject("sidebar.right.tab.files.actions", () =>
+      ctx.slots.register(
+        {
+          name: "sidebar.right.tab.files.actions",
+          id: "dsh-folder-download",
+          order: 100,
+        },
+        ui.FolderDownload,
+      ),
+    );
     return () => {
       unregister();
+      unregisterFolders();
       ui.dispose();
     };
   });

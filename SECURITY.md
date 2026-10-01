@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Security fixes are provided for the latest `0.1.x` release. Supported Harness and browser baselines are listed in [compatibility](docs/compatibility.md).
+Security fixes are provided for the latest `0.2.x` release. Supported Harness and browser baselines are listed in [compatibility](docs/compatibility.md).
 
 ## Reporting a vulnerability
 
@@ -18,6 +18,7 @@ Reports will be reviewed on a best-effort basis. This independent project does n
 - The plugin adds no server endpoint, path confinement, or additional authorization policy.
 - File identity and chunk validation prevent completing known mixed-version or incomplete transfers.
 - Small-file buffering is limited to 32 MiB per transfer; larger files require browser streaming support.
+- Folder archives reject unsafe ZIP paths and incomplete listings, cap entry/metadata growth, and inherit the host's workspace-scoped directory listing rules.
 - File content stays between the Harness host and the requesting browser; the plugin sends no analytics or uploads to external services.
 
 Issues in Harness's underlying file service should also be reported through Harness's own security process.
