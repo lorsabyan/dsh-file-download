@@ -28,6 +28,11 @@ jobs:
         run: node --input-type=module -e 'import pkg from "./package.json" with { type:"json" }; if (process.env.GITHUB_REF_NAME !== `v${pkg.version}`) throw new Error("Tag and package version differ");'
       - run: npm ci
       - run: npm run release:pack
+      - name: Verify installation in the qualified Harness baseline
+        run: |
+          npm install --prefix "$RUNNER_TEMP/harness-tools" @deepseek-ai/dsh@0.2.0-rc.2 pnpm@10.34.6 --no-audit --no-fund
+          export PATH="$RUNNER_TEMP/harness-tools/node_modules/.bin:$PATH"
+          npm run test:harness
       - name: Publish prebuilt archive and checksums
         env:
           GH_TOKEN: ${{ github.token }}

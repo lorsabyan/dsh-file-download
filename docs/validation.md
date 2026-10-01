@@ -2,7 +2,7 @@
 
 ## Automated checks
 
-`npm run check` verifies formatting, reproducibility of the committed modules, and the full Node test suite. CI runs it on Node.js 22 and 24, then creates a release archive and checksum.
+`npm run check` verifies formatting, reproducibility of the committed modules, and the full Node test suite. CI runs it on Node.js 22 and 24, then creates a release archive and checksum. The Node 24 job and release workflow also install the archive into a fresh Harness `0.2.0-rc.2` home, check native authentication and browser registration, and remove the plugin.
 
 Tests cover:
 
@@ -14,6 +14,8 @@ Tests cover:
 - Browser ModuleLoader registration, portable activation metadata, no-op server activation, and the archive file allowlist.
 
 The DOM tests use jsdom and Harness-shaped service mocks. They cannot prove native Save dialog behavior or compatibility with a future Harness release.
+
+The public `0.1.0` archive also passed the isolated installer/authentication/browser-registration/removal smoke check on Linux ARM64 with Harness `0.2.0-rc.2` and pnpm `10.34.6`. GitHub CI covers Linux x64. Native browser Save behavior remains a manual check.
 
 ## Manual qualification
 
